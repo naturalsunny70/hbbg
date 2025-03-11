@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>생일축하 풍선터뜨리기 게임 (폭죽 효과)</title>
+  <title>생일축하 풍선터뜨리기 게임 (분수형 폭죽)</title>
   <style>
     body {
       margin: 0;
@@ -24,7 +24,7 @@
       background: #fce4ec;
     }
 
-    /* 풍선 기본 스타일 */
+    /* 풍선 스타일 */
     .balloon {
       position: absolute;
       width: 60px;
@@ -65,45 +65,48 @@
       color: #e91e63;
     }
 
-    /* ─────────────────────────────────────
-       여기서부터는 '폭죽(불꽃놀이)' 효과
-       ───────────────────────────────────── */
-    /* 폭죽이 나타날 때 덧씌울 컨테이너(전체 화면) */
+    /* ──────────────────────────────────────────────────
+       분수형 폭죽(불꽃놀이) 효과를 위한 스타일
+       ────────────────────────────────────────────────── */
+    /* 폭죽 컨테이너 (화면 전체를 덮을 요소) */
     #fireworksContainer {
-      position: fixed; /* 화면 전체 고정 */
+      position: fixed; /* 화면 전체 */
       top: 0;
       left: 0;
       width: 100vw;
       height: 100vh;
-      pointer-events: none; /* 클릭 막지 않게 */
-      overflow: hidden;     /* 밖으로 나가는 스파크는 숨김 */
-      z-index: 9999;        /* 최상위로 올림 */
+      pointer-events: none; /* 클릭 방해 X */
+      overflow: hidden;
+      z-index: 9999; /* 최상위 */
     }
 
-    /* 폭죽 하나의 불꽃(spark)을 표현할 div 스타일 */
+    /* 폭죽 하나의 '불꽃' 스파크 */
     .spark {
       position: absolute;
-      width: 6px;
-      height: 6px;
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
-      background: red;        /* 불꽃 색 (랜덤 지정할 거라 일단 임시값) */
+      background: red;     /* 기본 색 (실제론 JS에서 랜덤 지정) */
       opacity: 0;
-      animation: sparkAnim 1s ease-out forwards;
+      animation: fountainAnim 2s ease-out forwards;
     }
 
-    /* 불꽃이 퍼지는 애니메이션 */
-    /* transform, opacity 등을 조정해 간단히 '톡' 터지는 느낌 */
-    @keyframes sparkAnim {
+    /* '분수'처럼 위로 뿜어져 사라지는 애니메이션 */
+    @keyframes fountainAnim {
       0% {
-        transform: translate(0,0) scale(1);
+        transform: translate(0, 0) scale(0.3);
         opacity: 1;
       }
-      80% {
+      25% {
         opacity: 1;
       }
       100% {
+        /* 
+          --spark-tx, --spark-ty 는 
+          JS에서 각 불꽃별로 서로 다른 위치로 날아가도록 지정 
+        */
+        transform: translate(var(--spark-tx, 0), var(--spark-ty, 0)) scale(1.8);
         opacity: 0;
-        transform: translate(0,0) scale(0);
       }
     }
   </style>
@@ -111,7 +114,7 @@
 <body>
   <h1>생일 축하 풍선터뜨리기 게임</h1>
 
-  <!-- (옵션) 생일 축하 노래 파일: 필요 없다면 제거하거나 다른 경로로 수정하세요 -->
+  <!-- (옵션) 생일 축하 노래: 필요 없다면 제거하거나 경로 수정하세요 -->
   <audio id="happySong" src="happy_birthday_song.mp3" preload="auto"></audio>
   
   <div id="gameContainer"></div>
@@ -139,8 +142,8 @@
     let balloonCount = 20;     // 생성할 풍선 개수
     let score = 0;             // 점수
     let gameStarted = false;   // 게임 진행 여부
-    let balloons = [];         // 풍선 DOM 요소를 담는 배열
-    let animationId = null;    // requestAnimationFrame 제어용
+    let balloons = [];         // 풍선 DOM 요소
+    let animationId = null;    // requestAnimationFrame용
 
     // 풍선 색상 배열
     const balloonColors = [
@@ -154,7 +157,6 @@
     // ------------------------------------------------
     function createBalloons() {
       for (let i = 0; i < balloonCount; i++) {
-        // 풍선 DOM 생성
         const balloon = document.createElement('div');
         balloon.classList.add('balloon');
         
@@ -168,31 +170,30 @@
         balloon.style.left = x + 'px';
         balloon.style.top = y + 'px';
 
-        // 풍선 속도(방향) 랜덤 (-3 ~ +3)
+        // 속도(방향) 랜덤 (-3 ~ +3)
         const dx = (Math.random() * 6) - 3; 
         const dy = (Math.random() * 6) - 3;
 
-        // 풍선에 속도 정보를 dataset으로 저장
         balloon.dataset.dx = dx;
         balloon.dataset.dy = dy;
 
-        // 클릭해서 터뜨리기
+        // 풍선 클릭 -> 제거
         balloon.addEventListener('click', () => {
           popBalloon(balloon);
         });
 
-        // DOM과 배열에 추가
+        // 게임 영역에 추가
         gameContainer.appendChild(balloon);
         balloons.push(balloon);
       }
     }
 
     // ------------------------------------------------
-    // 풍선 터뜨리기 함수
+    // 풍선 터뜨리기
     // ------------------------------------------------
     function popBalloon(balloon) {
-      balloon.remove(); // DOM에서 제거
-      balloons = balloons.filter(b => b !== balloon); // 배열에서도 제거
+      balloon.remove();
+      balloons = balloons.filter(b => b !== balloon);
 
       score++;
       scoreElement.textContent = score;
@@ -202,7 +203,7 @@
     }
 
     // ------------------------------------------------
-    // 풍선 움직임 (매 프레임마다)
+    // 풍선 움직임 (매 프레임)
     // ------------------------------------------------
     function moveBalloons() {
       balloons.forEach(balloon => {
@@ -211,24 +212,19 @@
         let dx = parseFloat(balloon.dataset.dx);
         let dy = parseFloat(balloon.dataset.dy);
 
-        // 새 위치
         x += dx;
         y += dy;
 
-        // 테두리에 부딪히면 반사
+        // 화면 테두리에 닿으면 반사
         if (x < 0) {
-          x = 0;
-          dx = -dx;
+          x = 0; dx = -dx;
         } else if (x + 60 > gameContainer.clientWidth) {
-          x = gameContainer.clientWidth - 60;
-          dx = -dx;
+          x = gameContainer.clientWidth - 60; dx = -dx;
         }
         if (y < 0) {
-          y = 0;
-          dy = -dy;
+          y = 0; dy = -dy;
         } else if (y + 80 > gameContainer.clientHeight) {
-          y = gameContainer.clientHeight - 80;
-          dy = -dy;
+          y = gameContainer.clientHeight - 80; dy = -dy;
         }
 
         balloon.style.left = x + 'px';
@@ -241,16 +237,16 @@
     }
 
     // ------------------------------------------------
-    // 폭죽(불꽃놀이) 효과 함수
+    // "분수형" 폭죽(불꽃놀이) 함수
     // ------------------------------------------------
-    function showFireworks() {
-      // 폭죽 컨테이너 생성
+    function showFountain() {
+      // 폭죽 컨테이너
       const fwContainer = document.createElement('div');
       fwContainer.id = 'fireworksContainer';
       document.body.appendChild(fwContainer);
 
-      // 폭죽을 표현할 "스파크" 요소 여러 개 생성
-      const sparkCount = 30; // 불꽃 개수
+      // 폭죽 spark 개수, 색상
+      const sparkCount = 40; 
       const sparkColors = [
         "#ff1744", "#f50057", "#d500f9", "#651fff",
         "#3d5afe", "#2979ff", "#00b0ff", "#00e5ff",
@@ -258,60 +254,51 @@
         "#ffea00", "#ffc400", "#ff9100", "#ff3d00"
       ];
 
-      // 화면 중앙(혹은 원하는 위치)에서 폭죽이 퍼지게 하려면
-      // 여기서는 화면 정중앙에서 폭죽이 터지는 것으로 계산
+      // "분수"가 나오는 위치: 화면 아래쪽 중앙
       const centerX = window.innerWidth / 2;
-      const centerY = window.innerHeight / 2;
+      const centerY = window.innerHeight * 0.8; // 80% 지점 (아래쪽)
 
+      // 여러 불꽃 생성
       for (let i = 0; i < sparkCount; i++) {
         const spark = document.createElement('div');
         spark.classList.add('spark');
 
-        // 불꽃 색상 랜덤
+        // 랜덤 색상
         const color = sparkColors[Math.floor(Math.random() * sparkColors.length)];
         spark.style.background = color;
 
-        // 폭죽 컨테이너 기준으로 위치를 절대 지정
-        // 처음엔 중앙에서 시작
+        // 처음 위치(아래쪽 중앙)
         spark.style.left = centerX + "px";
         spark.style.top = centerY + "px";
 
-        // 불꽃이 퍼지는 방향(각도), 거리, 크기 등을 랜덤화
-        const angle = Math.random() * 360; // 0 ~ 359도
-        const distance = 100 + Math.random() * 100; // 폭죽 파편이 날아가는 거리
-        const size = 6 + Math.random() * 10;        // 불꽃 크기
+        // 불꽃이 퍼지는 각도(분수 느낌을 위해 -45도 ~ +45도 사이)
+        const angle = (Math.random() * 90) - 45; // -45 ~ +45
+        // 거리(얼마나 위로 뻗을지)
+        const distance = 200 + Math.random() * 200; // 200 ~ 400
+        // 크기(약간 랜덤)
+        const size = 8 + Math.random() * 8; // 8 ~ 16 px
 
-        // spark 크기 조정
+        // 불꽃 크기
         spark.style.width = size + "px";
         spark.style.height = size + "px";
 
-        // transform을 이용해서 각도, 거리만큼 이동되도록 (CSS 애니메이션 속에서 변경)
-        // 하지만 CSS 키프레임에는 일괄 `translate(0,0)`->`translate(??, ??)`로 되어있으므로
-        // 아래와 같이 `spark.style.transform = ...` 만으로는 안 됨.
-        // -> 대신 "top/left"를 직접 바꿔주거나, keyframes를 개별로 넣어야 함.
-        // -> 여기서는 trick으로 "animation-delay"를 이용해 약간씩 어긋나게 보이게 해도 됨.
+        // 최종 이동할 좌표 (각도+거리 이용)
+        const rad = angle * (Math.PI / 180);
+        const finalX = Math.cos(rad) * distance;
+        const finalY = -Math.sin(rad) * distance; 
+        // (위로 뻗어나가야 하므로 Y는 -부호)
 
-        // 여기서는 keyframes를 공용으로 쓰면서 개별 요소가 다른 위치로 날아가게 하려면
-        // animation을 쓰기보다는 JS setInterval or requestAnimationFrame으로 직접 이동시켜야 합니다.
-        // 간단히 CSS keyframes로 '톡' 터지는 모양만 만들고, 파편 각각이 "시작 좌표"를 다르게 해주기 위해
-        // 아래와 같이 style.left/top을 약간 랜덤하게 변경해주겠습니다:
+        // 각 불꽃마다 CSS 변수로 최종 위치 지정
+        spark.style.setProperty('--spark-tx', finalX + 'px');
+        spark.style.setProperty('--spark-ty', finalY + 'px');
 
-        const rad = (angle * Math.PI) / 180; // 라디안 변환
-        const finalX = centerX + Math.cos(rad) * distance;
-        const finalY = centerY + Math.sin(rad) * distance;
-
-        // 한 번에 "팍" 튀어나간 것처럼 보이게: transition 없이 즉시 좌표 적용
-        spark.style.left = finalX + "px";
-        spark.style.top = finalY + "px";
-
-        // 컨테이너에 추가
         fwContainer.appendChild(spark);
       }
 
-      // 일정 시간 후 폭죽 요소 제거 (1초 애니메이션 종료 후 조금 더 기다렸다가 제거)
+      // 2초 애니메이션이므로, 조금 더 기다렸다가 제거
       setTimeout(() => {
         fwContainer.remove();
-      }, 1500);
+      }, 2500);
     }
 
     // ------------------------------------------------
@@ -329,15 +316,14 @@
       score = 0;
       scoreElement.textContent = score;
 
-      // 풍선 생성
+      // 풍선 생성 & 움직임
       createBalloons();
-      // 풍선 움직임 시작
       animationId = requestAnimationFrame(moveBalloons);
 
       // (옵션) 생일 축하 노래 재생
       happySong.currentTime = 0;
-      happySong.play().catch((error) => {
-        console.log("오디오 재생이 차단될 수 있음:", error);
+      happySong.play().catch(err => {
+        console.log("오디오 재생이 차단되었습니다:", err);
       });
     }
 
@@ -348,12 +334,13 @@
       // 풍선 움직임 중지
       cancelAnimationFrame(animationId);
 
-      // 폭죽 효과!
-      showFireworks();
+      // 분수형 폭죽 효과!
+      showFountain();
 
       gameOverMessage.style.display = 'block';
       restartButton.style.display = 'inline-block';
-      // 노래 멈추고 싶다면 주석 해제:
+
+      // 노래 끄고 싶다면 아래 주석 해제
       // happySong.pause();
     }
 
@@ -361,7 +348,7 @@
     // 다시 시작
     // ------------------------------------------------
     function restartGame() {
-      // 풍선 제거
+      // 기존 풍선 제거
       balloons.forEach(balloon => balloon.remove());
       balloons = [];
 
@@ -369,7 +356,7 @@
       gameStarted = false;
       cancelAnimationFrame(animationId);
 
-      // 재시작
+      // 게임 재시작
       startGame();
     }
 
