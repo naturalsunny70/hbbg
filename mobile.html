@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <!-- iPhone Safari 확대/스크롤 방지 -->
+  <meta name="viewport" content="user-scalable=no, initial-scale=1.0, maximum-scale=1.0" />
+  <title>풍선 터뜨리기 (iPhone Safari 대응)</title>
+  <style>
+    body {
+      margin: 0; 
+      overflow: hidden; 
+      /* iOS Safari에서 기본 제스처(핀치줌 등) 방지 */
+      touch-action: none;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    canvas {
+      display: block;
+      /* 터치 시 스크롤/확대 방지 */
+      touch-action: none;
+    }
+  </style>
+</head>
+<body>
+
+<!-- 
+  Phaser 3.60.0 min 소스 (약 800KB)
+  - https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js
+  - 내용을 전부 복사해서 아래 주석 사이에 붙여넣으세요
+-->
+<script>
+/* 
+(…Phaser 3.60.0 미니파이드 전체 코드…) 
+   대략 "!function(t,e){\"use strict\";var i= ... (중략) ... this is the entire minified code ...}" 
+   로 시작해서 ... 
+   ... "Phaser.VERSION=\"3.60.0\",t.Phaser=r}(...)"  
+   로 끝납니다.
+*/
+</script>
+
+<script>
+// iOS 더블탭/핀치 제스처 방지
+document.addEventListener('gesturestart', e => e.preventDefault(), { passive: false });
+document.addEventListener('dblclick', e => e.preventDefault(), { passive: false });
+
+// ====== Base64 리소스 (이미지 & 사운드) ======
+const BALLOON_IMG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC4AAAAuCAYAAAAjz2f3AAABp0lEQVRYR+2XMU7CQBBFX4E1jGjoDfwK7oQfIKZScj6BFcCqWKPgJpFzgJ/QIDxD6De+czkzAyGMDNTn8/2kCGkCIiIiIiIgIpXUh1xILeKVO+G+jvR+I05eA3bga7/h8k1i8rlO19uJ3caFWsEJAS8mJWD4ujzm4ZmEyCe5I+TLW9XeX2A8fIZNb9OgM3ijyfa++nju36Mt351iZN7gx7Yk4uE4m48cCh4sTmC3q0UYw6cMr8ecMz5Dk4MgiKG1K+8aNPCp2q6xaO4A/GegV41+y3dTh1W+el/wWc56WIBwxMdZWOYw2r9kxCkCstI8ln/V3k8fQ+YQOFg+Nll+IfZAdZyxaZwt6I6GXc19PMW4quJiHMXpFE+6Q8hFke1DmIl/kE3qM3m93XkKs4Nn2BUcom+mHap2pRySKhZ/TydNQKRMhIwf1g8py7//QzNiFAGii2z9O8kLCVFzATA0XQ9KASDQMfZ5a/BPjIPl052SMiIiIiIiICJm8QtLsUrolfBAAAAAElFTkSuQmCC";
+const POP_SOUND   = "data:audio/wav;base64,UklGRnwBAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YY4AAAAPAAAAAAAOAAAAAAD///8AAAAAAAD///8AAAAAAAD///8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+
+// Phaser 게임 설정
+const config = {
+  type: Phaser.AUTO,
+  width: 800,
+  height: 600,
+  backgroundColor: '#88e',
+  scene: [MainScene]
+};
+const game = new Phaser.Game(config);
+
+// ----- 메인 씬: 풍선 터뜨리기 예시 -----
+class MainScene extends Phaser.Scene {
+  constructor() {
+    super({ key: 'MainScene' });
+  }
+
+  preload() {
+    // 풍선 이미지 & 팝 사운드 로드
+    this.load.image('balloon', BALLOON_IMG);
+    this.load.audio('pop', POP_SOUND);
+  }
+
+  create() {
+    // 모바일 터치 입력 보조 (추가 포인터 확보)
+    this.input.addPointer(1);
+
+    // 풍선 여러개 생성 예시
+    for(let i=0; i<5; i++){
+      const x = Phaser.Math.Between(100, 700);
+      const y = Phaser.Math.Between(100, 500);
+      const balloon = this.add.sprite(x, y, 'balloon')
+        .setScale(0.6)
+        .setInteractive({ useHandCursor: true })
+        .on('pointerdown', (pointer) => {
+          // iOS Safari에서 확대/스크롤 방지
+          pointer.event.preventDefault();
+          this.popBalloon(balloon);
+        });
+    }
+
+    // 안내 텍스트
+    this.add.text(160, 50, '풍선을 터치(클릭)해 터뜨리세요!', 
+      { fontSize: '30px', fill: '#fff' });
+  }
+
+  popBalloon(balloon) {
+    // 팝 사운드
+    this.sound.play('pop');
+    // 풍선 제거 (또는 애니메이션 후 제거 가능)
+    balloon.destroy();
+  }
+}
+</script>
+
+</body>
+</html>
