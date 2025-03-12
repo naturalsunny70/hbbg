@@ -4,12 +4,12 @@
   <meta charset="UTF-8" />
   <title>생일 축하 풍선터뜨리기 게임 (PC/모바일)</title>
 
-  <!-- 모바일에서 pinch zoom & 더블탭 확대 방지 -->
+  <!-- 모바일: pinch zoom, 더블탭 확대 방지 -->
   <meta name="viewport" content="width=device-width, maximum-scale=1.0, user-scalable=no" />
 
   <style>
     body {
-      margin: 0;
+      margin: 0; 
       padding: 0;
       font-family: sans-serif;
       text-align: center;
@@ -20,7 +20,7 @@
     }
     /* 모바일 확대 방지 */
     html, body {
-      touch-action: none; 
+      touch-action: none; /* 기본 제스처 차단 */
       -webkit-user-select: none;
       -webkit-touch-callout: none;
       -webkit-text-size-adjust: none;
@@ -34,17 +34,16 @@
       height: 70vh;
       overflow: hidden;
       background: #fce4ec;
-      cursor: pointer;
+      cursor: pointer; /* 모바일에서 터치로 시작 */
     }
 
-    /* 풍선 그룹(본체+줄+매듭) */
+    /* 풍선(본체+줄+매듭) 감싸는 컨테이너 */
     .balloonGroup {
       position: absolute;
       width: 60px;
       height: 120px;
     }
 
-    /* 풍선 본체 */
     .balloon {
       position: absolute;
       width: 60px;
@@ -59,7 +58,7 @@
       transform: scale(1.1);
     }
 
-    /* 풍선 줄(이어진 검은 선) */
+    /* 이어진 검은 줄 */
     .balloonTail {
       position: absolute;
       width: 2px;
@@ -69,7 +68,7 @@
       background: #000;
     }
 
-    /* 풍선 매듭 (180도 반전 삼각형) */
+    /* 매듭 삼각 (180도 반전) */
     .balloonKnot {
       position: absolute;
       top: 75px;
@@ -78,10 +77,9 @@
       height: 0;
       border-left: 5px solid transparent;
       border-right:5px solid transparent;
-      border-bottom: 5px solid #000; 
+      border-bottom: 5px solid #000;
     }
 
-    /* 점수판, 버튼 */
     #scoreBoard {
       font-size: 1.2rem;
       margin: 20px;
@@ -147,7 +145,7 @@
 <body>
   <h1 id="title">생일 축하 풍선터뜨리기 게임</h1>
 
-  <!-- 기존 happySong.mp3 (실제로 존재해야 함) -->
+  <!-- MP3 음원 -->
   <audio id="happySong" src="happy_birthday_song.mp3" preload="auto"></audio>
 
   <div id="gameContainer"></div>
@@ -155,10 +153,24 @@
   <button id="startButton">게임 시작</button>
   <button id="restartButton">다시 시작</button>
   <div id="gameOverMessage">축하합니다! 풍선을 모두 터뜨렸어요!</div>
-  
+
   <script>
+    /*
+      1) iOS Safari 등에서
+         더블 탭으로 확대되는 것 방지
+         (touchend 이벤트 2회 연속 시 preventDefault)
+    */
+    let lastTouchEnd=0;
+    document.addEventListener('touchend', function(e){
+      let now=(new Date()).getTime();
+      if(now-lastTouchEnd<=300){
+        e.preventDefault(); // 확대 방지
+      }
+      lastTouchEnd=now;
+    }, { passive:false });
+
     // 모바일 판별
-    function isMobile() {
+    function isMobile(){
       return /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
         navigator.userAgent
       );
@@ -172,7 +184,7 @@
     const happySong       = document.getElementById('happySong');
     const titleElement    = document.getElementById('title');
 
-    let balloonCount = 20;
+    let balloonCount=20;
     let score=0;
     let gameStarted=false;
     let balloons=[];
@@ -184,29 +196,17 @@
       "#795548","#607d8b","#f44336","#ab47bc","#66bb6a","#ffa726"
     ];
 
-    // ------------------------------------------------
-    // Web Audio API로 8비트풍을 길게 (약 15~20초) 구성
-    // ------------------------------------------------
+    // WebAudio API(8bit)
     let audioCtx=null;
-    /*
-      임의로 길게 만든 Happy Birthday 음정/길이. (대략 20초)
-      [주파수(Hz), 길이ms]
-      G4=392, A4=440, B4=494, C5=523, D5=587, E5=659, F#5=740, G5=784 등
-    */
     const tune=[
-      // 첫 줄 (생일축하합니다 1)
       [392,300],[392,300],[440,600],[392,600],[523,600],[494,900],
       [0,200],
-      // 둘째 줄 (생일축하합니다 2)
       [392,300],[392,300],[440,600],[392,600],[587,600],[523,900],
       [0,400],
-      // 셋째 줄 (사랑하는 우리아들)
       [392,300],[392,300],[784,600],[659,400],[523,300],[494,300],[440,900],
       [0,300],
-      // 넷째 줄 (생일축하합니다)
       [698,300],[698,300],[659,600],[523,400],[587,300],[523,900],
       [0,600],
-      // 반복해서 조금 더 길게 or 맺음
       [392,300],[392,300],[784,600],[659,400],[523,300],[494,300],[440,900],
       [0,600]
     ];
@@ -233,9 +233,9 @@
       }
     }
 
-    // 모바일이면 안내문 수정
+    // 모바일 안내
     if(isMobile()){
-      titleElement.textContent="모바일: 핑크색을 터치하면 시작!";
+      titleElement.textContent="모바일: 핑크색 영역 터치하면 시작";
       startButton.style.display='none';
       gameContainer.addEventListener('pointerdown',(evt)=>{
         if(!gameStarted){
@@ -258,7 +258,6 @@
 
         const tail=document.createElement('div');
         tail.classList.add('balloonTail');
-
         const knot=document.createElement('div');
         knot.classList.add('balloonKnot');
 
@@ -286,14 +285,13 @@
       }
     }
 
-    // 풍선 터뜨리기
+    // 풍선 제거
     function popBalloon(group){
       group.remove();
-      balloons = balloons.filter(b=>b!==group);
-
+      balloons=balloons.filter(b=>b!==group);
       score++;
       scoreElement.textContent=score;
-      if(score>= balloonCount){
+      if(score>=balloonCount){
         endGame();
       }
     }
@@ -320,7 +318,7 @@
       animationId=requestAnimationFrame(moveBalloons);
     }
 
-    // 폭죽(분수형)
+    // 폭죽
     function showFountain(){
       const fw=document.createElement('div');
       fw.id='fireworksContainer';
@@ -358,7 +356,6 @@
 
         fw.appendChild(sp);
       }
-
       setTimeout(()=>{fw.remove();},2500);
     }
 
@@ -369,17 +366,14 @@
       startButton.style.display='none';
       restartButton.style.display='none';
       gameOverMessage.style.display='none';
-      score=0;
-      scoreElement.textContent=score;
+      score=0;scoreElement.textContent=score;
 
       createBalloons();
       animationId=requestAnimationFrame(moveBalloons);
 
       // MP3 재생
       happySong.currentTime=0;
-      happySong.play().catch(err=>{
-        console.log('오디오 재생 차단:', err);
-      });
+      happySong.play().catch(err=>{console.log('오디오 재생 차단:',err);});
     }
 
     // 게임 종료
@@ -406,8 +400,8 @@
       startGame();
     }
 
-    startButton.addEventListener('click',startGame);
-    restartButton.addEventListener('click',restartGame);
+    startButton.addEventListener('click', startGame);
+    restartButton.addEventListener('click', restartGame);
   </script>
 </body>
 </html>
