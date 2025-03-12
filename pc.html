@@ -2,102 +2,217 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <!-- 아이폰/안드로이드 등에서 확대한 뒤 다시 축소되는 문제 방지 -->
-  <meta name="viewport" content="user-scalable=no, initial-scale=1.0, maximum-scale=1.0" />
-  <title>풍선 터뜨리기 (iPhone Safari 수정버전)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>생일 축하 게임 - All-In-One</title>
   <style>
-    body {
-      margin: 0; 
-      overflow: hidden; 
-      /* iOS Safari에서 기본 제스처(핀치줌 등) 방지 */
-      touch-action: none;
-      -webkit-touch-callout: none;
-      -webkit-user-select: none;
-      user-select: none;
-    }
-    canvas {
-      display: block;
-      /* 터치 시 스크롤/확대 방지 */
-      touch-action: none;
-    }
+    body { margin: 0; overflow: hidden; }
+    canvas { display: block; }
   </style>
-
-  <!-- 
-    Phaser 3.60.0 min 소스 전체를 붙여 넣기
-    https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js
-    에 접속하여 내용 전체 복사 → 아래 주석 위치에 붙여넣으세요.
-  -->
-  <script>
-  /* Phaser min 코드 자리
-     예) !function(t,e){\"use strict\"; ... (중략) ... 
-  */
-  </script>
 </head>
 <body>
+<!-- 
+  1) Phaser 3.60.0 min 코드 붙여넣기
+  - phaser.min.js 파일 전체 내용을 아래 주석 위치에 복사하여 넣으세요.
+-->
+<script>
+/* Phaser min 코드 자리
+   예) 
+     !function(t,e){"use strict"; ... 
+     (중략)
+     ... this is the entire minified content ...
+     ...
+*/
+</script>
 
 <script>
-// iOS 더블탭/핀치 확대 방지 코드
-document.addEventListener('gesturestart', e => e.preventDefault(), { passive: false });
-document.addEventListener('dblclick', e => e.preventDefault(), { passive: false });
+/* 
+  ==== Base64로 인라인된 간단한 플레이스홀더 이미지 & 오디오 ====
+  (크기를 줄이기 위해 매우 간단한 이미지만 사용)
+*/
+const HOUSE_IMG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAABkCAIAAABM5OhcAAABhUlEQVR4nO3aQUrDQABA0VS8nN7FbnuGbnuYns9FQEJT01T9qOl7q4FMYBafmSFk9/J2HOCnPf32AtgmYZEQFglhkRAWCWGREBYJYZEQFglhkRAWCWGReF5+fD4dhmF43R/HwTjOF8X/dyOsC2NV08jm44s5V9/67qr581YdhdNKLuq5Wsm0oWlV8+bYqlVh3bvHfMw/nw7zKHkE9x2F6003J4fgA9ot/0F69fI+D2V5K/rs1sWG3QgLvsZ3LBLCIiEsEsIiISwSwiIhLBLCIiEsEsIiISwSwiIhLBLCIiEsEsIiISwSwiIhLBLCIiEsEsIiISwSwiIhLBLCIiEsEsIiISwSwiIhLBLCIiEsEsIiISwSwiIhLBLCIiEsEsIiISwSwiIhLBLCIiEsEsIiISwSwiIhLBLCIiEsEsIiISwSwiIhLBLCIiEsEsIiISwSwiIhLBLCIvEOiQ5ISBbp1FAAAAAASUVORK5CYII=";
+const CAKE_IMG  = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAABkCAIAAABM5OhcAAABi0lEQVR4nO3aTWrCYBRAUS3dXN1LM3UNTl2M6+sgoCGxxv5cCs05Iw1PcHD5fCTu395PO/htL3/9BfifhEVCWCSERUJYJIRFQlgkhEVCWCSERUJYJF5/+PnL+Ti+OAyeOXKzHtY1nd29eg7DaToAo5Wwxmhm9Xx2Sl2HH8ywEc/uWIfhNC1mVs/d68sZtuPLy/uDXO4eYGzTs2FdzscxlOlptJyZvh0POT+F27Rf/QfpbFta1rPcw2Y7mbY2aD0s+AY3SEkIi4SwSAiLhLBICIuEsEgIi4SwSAiLhLBICIuEsEgIi4SwSAiLhLBICIuEsEgIi4SwSAiLhLBICIuEsEgIi4SwSAiLhLBICIuEsEgIi4SwSAiLhLBICIuEsEgIi4SwSAiLhLBICIuEsEgIi4SwSAiLhLBICIuEsEgIi4SwSAiLhLBICIuEsEgIi4SwSAiLhLBICIuEsEgIi8QHYt1LSGwCeCEAAAAASUVORK5CYII=";
+const QUIZ_IMG  = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAABkCAIAAABM5OhcAAABe0lEQVR4nO3ZQWqDQABA0aa3q3ep25zBbQ6T83UhSEgKxuKnTX1vOcrg4jMzOKePz+kN9vb+2x/A/yQsEsIiISwSwiIhLBLCIiEsEsIiISwSwiKxW1jXy/l6Oe81G6/utHoJveQyjK6redZKWHNVwzjdrUbLyN2jOb7Hl3f8Yl7Ctq3w20SGcXocX0ZUdUzJ4f12PSvm5+9LwrrdJZ3oj+knh/etrVi3Dmg9rJmtjU2eDQs28eedhLBICIuEsEgIi4SwSAiLhLBICIuEsEgIi4SwSAiLhLBICIuEsEgIi4SwSAiLhLBICIuEsEgIi4SwSAiLhLBICIuEsEgIi4SwSAiLhLBICIuEsEgIi4SwSAiLhLBICIuEsEgIi4SwSAiLhLBICIuEsEgIi4SwSAiLhLBICIuEsEgIi4SwSAiLhLBICIuEsEgIi4SwSAiLhLBICIuEsEgIi8QHYt1LSGwCeCEAAAAASUVORK5CYII=";
+const PLAYER_IMG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAIAAAD/gAIDAAABcUlEQVR4nO3YQU7CQABAUTFeTu4iW87AlsNwPhckDaG17TMaqfy3IJPSJszPTKHs3j9OL1nn9a8/wJYUCxQLFAsUCxQLFAsUCxQLFAsUC7zpBZfzcRjvD8/1XLkQa5zm+np7/HmsWln7w+lyPl7Ox6+W0tDueubieLhkfPyR/cA9a5j2dTye81DkLtPd+PGtijU/pfUbc/Kc29394NZuw5l3JzfU5ObaRJEZu/l/SsdzXlxBdwtt8sLbmi/bibgQ69u2dTNaiX9nLdrQt5v6rZX1L/W4A4oFigWKBYoFigWKBYoFigWKBYoFigWKBYoFigWKBYoFigWKBYoFigWKBYoFigWKBYoFigWKBYoFigWKBYoFigWKBYoFigWKBYoFigWKBYoFigWKBYoFigWKBYoFigWKBYoFigWKBYoFigWKBYoFigWKBYoFigWKBYoFigWKBYoFigWKBYoFigWKBYoFigWKBYoFigWKBYoFigU+ARWTYc+RE36PAAAAAElFTkSuQmCC";
 
-// ----- Base64 리소스 (간단한 플레이스홀더) -----
-const BALLOON_IMG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC4AAAAuCAYAAAAjz2f3AAABp0lEQVRYR+2XMU7CQBBFX4E1jGjoDfwK7oQfIKZScj6BFcCqWKPgJpFzgJ/QIDxD6De+czkzAyGMDNTn8/2kCGkCIiIiIiIgIpXUh1xILeKVO+G+jvR+I05eA3bga7/h8k1i8rlO19uJ3caFWsEJAS8mJWD4ujzm4ZmEyCe5I+TLW9XeX2A8fIZNb9OgM3ijyfa++nju36Mt351iZN7gx7Yk4uE4m48cCh4sTmC3q0UYw6cMr8ecMz5Dk4MgiKG1K+8aNPCp2q6xaO4A/GegV41+y3dTh1W+el/wWc56WIBwxMdZWOYw2r9kxCkCstI8ln/V3k8fQ+YQOFg+Nll+IfZAdZyxaZwt6I6GXc19PMW4quJiHMXpFE+6Q8hFke1DmIl/kE3qM3m93XkKs4Nn2BUcom+mHap2pRySKhZ/TydNQKRMhIwf1g8py7//QzNiFAGii2z9O8kLCVFzATA0XQ9KASDQMfZ5a/BPjIPl052SMiIiIiIiICJm8QtLsUrolfBAAAAAElFTkSuQmCC";
-const POP_SOUND = "data:audio/wav;base64,UklGRnwBAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YY4AAAAPAAAAAAAOAAAAAAD///8AAAAAAAD///8AAAAAAAD///8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+/* 
+  ==== Base64 WAV 형태로 만든 작은 비프음 2종 ====
+  (진짜 생일축하 노래가 아닌 beep 사운드이므로, 필요하면 교체하세요)
+*/
+const BIRTHDAY_SND = "data:audio/wav;base64,UklGRl4BAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YY4AAAD/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+const EAT_SND      = "data:audio/wav;base64,UklGRl4BAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YY4AAAD/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 
-// ----- Phaser 게임 설정 -----
+/*
+  Phaser 게임 설정 (이미 Phaser 코드를 위 스크립트에 삽입했으므로, 전역에 Phaser가 존재)
+*/
 const config = {
   type: Phaser.AUTO,
   width: 800,
   height: 600,
-  backgroundColor: '#88e',
-  scene: [MainScene]
+  scene: [MainScene, CakeScene, QuizScene, MatchingGameScene, MultiplayerGameScene]
 };
-
 const game = new Phaser.Game(config);
 
-// ----- 메인 씬 (풍선 터뜨리기) -----
+/*
+  ========= 씬(Scene) 정의 =========
+*/
 class MainScene extends Phaser.Scene {
-  constructor() {
-    super({ key: 'MainScene' });
-  }
-
+  constructor() { super({ key: 'MainScene' }); }
   preload() {
-    // 풍선 이미지 & 팝 사운드
-    this.load.image('balloon', BALLOON_IMG);
-    this.load.audio('pop', POP_SOUND);
+    // house 이미지, birthdaySong 오디오(실제로는 비프음)
+    this.load.image('house', HOUSE_IMG);
+    this.load.audio('birthdaySong', BIRTHDAY_SND);
   }
-
   create() {
-    // iPhone Safari 등에서 이벤트가 막히지 않도록 pointerdown 사용
-    this.input.addPointer(1);
+    this.add.image(400, 300, 'house');
+    let music = this.sound.add('birthdaySong');
+    let startButton = this.add.text(300, 500, '문 열기 (클릭)', 
+      { fontSize: '32px', fill: '#FFF' }
+    ).setInteractive({ useHandCursor: true })
+     .on('pointerdown', () => {
+        music.play();
+        startButton.setText('생일 축하송 재생 중...');
+        // 실제론 3초 정도만 대기
+        setTimeout(() => this.scene.start('CakeScene'), 3000);
+     });
+  }
+}
 
-    // 풍선 여러 개 생성 예시
-    for(let i=0; i<5; i++){
-      const x = Phaser.Math.Between(100, 700);
-      const y = Phaser.Math.Between(100, 500);
-      const balloon = this.add.sprite(x, y, 'balloon')
-        .setScale(0.6)
+class CakeScene extends Phaser.Scene {
+  constructor() { super({ key: 'CakeScene' }); }
+  preload() {
+    // cake 이미지, eatSound 오디오(비프음)
+    this.load.image('cake', CAKE_IMG);
+    this.load.audio('eatSound', EAT_SND);
+  }
+  create() {
+    this.add.image(400, 300, 'cake');
+    let eatSound = this.sound.add('eatSound');
+    let eatButton = this.add.text(300, 500, '케이크 먹기 (클릭)', 
+      { fontSize: '32px', fill: '#FFF' }
+    ).setInteractive({ useHandCursor: true })
+     .on('pointerdown', () => {
+       eatSound.play();
+       eatButton.setText('냠냠! 케이크를 먹었어요!');
+       setTimeout(() => this.scene.start('QuizScene'), 2000);
+     });
+  }
+}
+
+class QuizScene extends Phaser.Scene {
+  constructor() { super({ key: 'QuizScene' }); }
+  preload() {
+    this.load.image('quizBg', QUIZ_IMG);
+  }
+  create() {
+    this.add.image(400, 300, 'quizBg');
+    let question = this.add.text(180, 200, '생일은 1년에 몇 번 있을까요?', 
+      { fontSize: '24px', fill: '#FFF' }
+    );
+    let answer1 = this.add.text(180, 300, 'A: 한 번', 
+      { fontSize: '20px', fill: '#FFF' }
+    ).setInteractive({ useHandCursor: true })
+     .on('pointerdown', () => this.showResult(true));
+    let answer2 = this.add.text(180, 350, 'B: 두 번', 
+      { fontSize: '20px', fill: '#FFF' }
+    ).setInteractive({ useHandCursor: true })
+     .on('pointerdown', () => this.showResult(false));
+  }
+  showResult(isCorrect) {
+    let resultText = isCorrect ? '정답! 🎉' : '틀렸어요 😅';
+    this.add.text(180, 450, resultText, { fontSize: '24px', fill: '#FFF' });
+    setTimeout(() => this.scene.start('MatchingGameScene'), 2000);
+  }
+}
+
+class MatchingGameScene extends Phaser.Scene {
+  constructor() { super({ key: 'MatchingGameScene' }); }
+  preload() {
+    // 여기서는 2종류 카드 + 뒷면(총 3개)의 이미지를 전부 이미 갖고 있음
+    this.load.image('card1', PLAYER_IMG); // 카드1
+    this.load.image('card2', CAKE_IMG);   // 카드2
+    this.load.image('back', HOUSE_IMG);   // 뒤집힌 카드
+  }
+  create() {
+    // 4장(2쌍) 카드를 섞어서 배치
+    let cards = [
+      { key: 'card1', matched: false },
+      { key: 'card1', matched: false },
+      { key: 'card2', matched: false },
+      { key: 'card2', matched: false }
+    ];
+    Phaser.Utils.Array.Shuffle(cards);
+
+    let positions = [200, 350, 500, 650];
+    let selectedCards = [];
+
+    cards.forEach((card, i) => {
+      let cardSprite = this.add.image(positions[i], 300, 'back')
         .setInteractive({ useHandCursor: true })
-        .on('pointerdown', (pointer) => {
-          pointer.event.preventDefault(); 
-          this.popBalloon(balloon);
-        });
-    }
-
-    // 안내 문구
-    this.add.text(200, 50, '풍선을 터치(클릭)해서 터뜨리세요', 
-      { fontSize: '28px', fill: '#fff' });
+        .on('pointerdown', () => this.flipCard(cardSprite, card, selectedCards));
+      card.sprite = cardSprite;
+    });
   }
 
-  popBalloon(balloon) {
-    // 팝 사운드 재생
-    this.sound.play('pop');
+  flipCard(sprite, card, selectedCards) {
+    if (selectedCards.length < 2 && !card.matched) {
+      sprite.setTexture(card.key);
+      selectedCards.push({ sprite, card });
+    }
+    if (selectedCards.length === 2) {
+      // 1초 기다렸다가 매칭 여부 검사
+      setTimeout(() => {
+        if (selectedCards[0].card.key === selectedCards[1].card.key) {
+          // 매칭 성공
+          selectedCards[0].card.matched = true;
+          selectedCards[1].card.matched = true;
+        } else {
+          // 다시 뒤집기
+          selectedCards[0].sprite.setTexture('back');
+          selectedCards[1].sprite.setTexture('back');
+        }
+        selectedCards.length = 0;
+        // 모든 카드가 다 맞춰졌는지 체크
+        if (this.checkAllMatched()) {
+          this.add.text(280, 500, '카드 매칭 완료!', { fontSize: '28px', fill: '#FFF' });
+          setTimeout(() => this.scene.start('MultiplayerGameScene'), 2000);
+        }
+      }, 1000);
+    }
+  }
+  checkAllMatched() {
+    // 씬에 있는 image 중, 'back'이 아닌 텍스처가 4장 있으면 전부 맞춘 상태
+    let matchedCount = 0;
+    this.children.list.forEach(obj => {
+      if (obj.texture && obj.texture.key !== 'back') matchedCount++;
+    });
+    return matchedCount === 4;
+  }
+}
 
-    // 풍선 제거 (또는 폭발 애니메이션 후 제거 가능)
-    balloon.destroy();
+class MultiplayerGameScene extends Phaser.Scene {
+  constructor() { super({ key: 'MultiplayerGameScene' }); }
+  preload() {
+    // 2명 플레이어 모두 같은 이미지
+    this.load.image('player', PLAYER_IMG);
+  }
+  create() {
+    this.add.text(250, 100, '멀티플레이 미니게임!', 
+      { fontSize: '32px', fill: '#FFF' }
+    );
+    let player1 = this.add.image(200, 300, 'player');
+    let player2 = this.add.image(600, 300, 'player');
+
+    let p1Button = this.add.text(150, 500, '플레이어 1 점프', 
+      { fontSize: '24px', fill: '#FFF' }
+    ).setInteractive({ useHandCursor: true })
+     .on('pointerdown', () => { player1.y -= 50; });
+
+    let p2Button = this.add.text(550, 500, '플레이어 2 점프', 
+      { fontSize: '24px', fill: '#FFF' }
+    ).setInteractive({ useHandCursor: true })
+     .on('pointerdown', () => { player2.y -= 50; });
   }
 }
 </script>
-
 </body>
 </html>
