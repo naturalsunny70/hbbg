@@ -4,46 +4,52 @@
   <meta charset="UTF-8" />
   <title>생일 축하 풍선터뜨리기 게임 (PC/모바일)</title>
 
-  <!-- 모바일: pinch zoom, 더블탭 확대 방지 -->
-  <meta name="viewport" content="width=device-width, maximum-scale=1.0, user-scalable=no" />
+  <!-- user-scalable=no + maximum-scale=1.0 → 핀치/더블탭 확대 방지 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
   <style>
-    body {
-      margin: 0; 
+    /* 
+      (1) body / html에 touch-action: none
+      (2) -webkit-user-select, -webkit-touch-callout
+      (3) overscroll-behavior
+    */
+    html, body {
+      margin: 0;
       padding: 0;
       font-family: sans-serif;
       text-align: center;
       background: #fff;
-    }
-    h1 {
-      margin: 20px;
-    }
-    /* 모바일 확대 방지 */
-    html, body {
-      touch-action: none; /* 기본 제스처 차단 */
+
+      /* 모바일 더블탭 / 제스처 방지 핵심 */
+      touch-action: none; 
       -webkit-user-select: none;
       -webkit-touch-callout: none;
       -webkit-text-size-adjust: none;
       overscroll-behavior: none;
     }
 
-    /* 게임 영역 */
+    h1 {
+      margin: 20px;
+    }
+
+    /* 게임 영역 (핑크색) */
     #gameContainer {
       position: relative;
       width: 100vw;
       height: 70vh;
       overflow: hidden;
       background: #fce4ec;
-      cursor: pointer; /* 모바일에서 터치로 시작 */
+      cursor: pointer; /* 모바일에서 터치 유도 */
     }
 
-    /* 풍선(본체+줄+매듭) 감싸는 컨테이너 */
+    /* 풍선 + 줄 + 삼각형 묶은 컨테이너 */
     .balloonGroup {
       position: absolute;
       width: 60px;
-      height: 120px;
+      height: 120px; /* 풍선+줄 */
     }
 
+    /* 풍선 본체 */
     .balloon {
       position: absolute;
       width: 60px;
@@ -51,14 +57,14 @@
       border-radius: 50% 50% 40% 40%;
       cursor: pointer;
       transition: transform 0.1s;
-      top: 0; 
+      top: 0;
       left: 0;
     }
     .balloon:hover {
       transform: scale(1.1);
     }
 
-    /* 이어진 검은 줄 */
+    /* 이어진 검은색 풍선 줄 */
     .balloonTail {
       position: absolute;
       width: 2px;
@@ -68,7 +74,7 @@
       background: #000;
     }
 
-    /* 매듭 삼각 (180도 반전) */
+    /* 180도 반전 삼각 (매듭) */
     .balloonKnot {
       position: absolute;
       top: 75px;
@@ -77,9 +83,10 @@
       height: 0;
       border-left: 5px solid transparent;
       border-right:5px solid transparent;
-      border-bottom: 5px solid #000;
+      border-bottom: 5px solid #000; 
     }
 
+    /* 점수판, 버튼 */
     #scoreBoard {
       font-size: 1.2rem;
       margin: 20px;
@@ -156,15 +163,14 @@
 
   <script>
     /*
-      1) iOS Safari 등에서
-         더블 탭으로 확대되는 것 방지
-         (touchend 이벤트 2회 연속 시 preventDefault)
+      iOS Safari 등에서
+      두 번 연속 탭(300ms 내) 시 확대를 막기 위한 로직
     */
     let lastTouchEnd=0;
     document.addEventListener('touchend', function(e){
       let now=(new Date()).getTime();
       if(now-lastTouchEnd<=300){
-        e.preventDefault(); // 확대 방지
+        e.preventDefault(); // 더블탭 확대 방지
       }
       lastTouchEnd=now;
     }, { passive:false });
@@ -196,9 +202,10 @@
       "#795548","#607d8b","#f44336","#ab47bc","#66bb6a","#ffa726"
     ];
 
-    // WebAudio API(8bit)
+    // WebAudio API (8비트)
     let audioCtx=null;
     const tune=[
+      // (중략: HappyTune)
       [392,300],[392,300],[440,600],[392,600],[523,600],[494,900],
       [0,200],
       [392,300],[392,300],[440,600],[392,600],[587,600],[523,900],
@@ -235,7 +242,7 @@
 
     // 모바일 안내
     if(isMobile()){
-      titleElement.textContent="모바일: 핑크색 영역 터치하면 시작";
+      titleElement.textContent="모바일: 핑크 영역 터치하면 게임 시작";
       startButton.style.display='none';
       gameContainer.addEventListener('pointerdown',(evt)=>{
         if(!gameStarted){
@@ -258,6 +265,7 @@
 
         const tail=document.createElement('div');
         tail.classList.add('balloonTail');
+
         const knot=document.createElement('div');
         knot.classList.add('balloonKnot');
 
@@ -289,6 +297,7 @@
     function popBalloon(group){
       group.remove();
       balloons=balloons.filter(b=>b!==group);
+
       score++;
       scoreElement.textContent=score;
       if(score>=balloonCount){
@@ -304,7 +313,8 @@
         let dx=parseFloat(group.dataset.dx);
         let dy=parseFloat(group.dataset.dy);
 
-        x+=dx; y+=dy;
+        x+=dx; 
+        y+=dy;
         if(x<0){x=0;dx=-dx;}
         else if(x+60>gameContainer.clientWidth){x=gameContainer.clientWidth-60;dx=-dx;}
         if(y<0){y=0;dy=-dy;}
@@ -366,14 +376,17 @@
       startButton.style.display='none';
       restartButton.style.display='none';
       gameOverMessage.style.display='none';
-      score=0;scoreElement.textContent=score;
+      score=0;
+      scoreElement.textContent=score;
 
       createBalloons();
       animationId=requestAnimationFrame(moveBalloons);
 
       // MP3 재생
       happySong.currentTime=0;
-      happySong.play().catch(err=>{console.log('오디오 재생 차단:',err);});
+      happySong.play().catch(err=>{
+        console.log('오디오 재생 차단:',err);
+      });
     }
 
     // 게임 종료
@@ -381,10 +394,10 @@
       cancelAnimationFrame(animationId);
       showFountain();
 
-      // MP3 중지
+      // MP3 중단
       happySong.pause();
 
-      // 8비트풍 재생
+      // 8bit 재생
       playEightBitSong();
 
       gameOverMessage.style.display='block';
@@ -400,8 +413,8 @@
       startGame();
     }
 
-    startButton.addEventListener('click', startGame);
-    restartButton.addEventListener('click', restartGame);
+    startButton.addEventListener('click',startGame);
+    restartButton.addEventListener('click',restartGame);
   </script>
 </body>
 </html>
