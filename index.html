@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <title>생일 축하 풍선터뜨리기 게임 (PC/모바일)</title>
 
-  <!-- 모바일환경에서 pinch zoom, 더블탭 확대 방지 -->
+  <!-- 모바일에서 pinch zoom & 더블탭 확대 방지 -->
   <meta name="viewport" content="width=device-width, maximum-scale=1.0, user-scalable=no" />
 
   <style>
@@ -34,9 +34,17 @@
       height: 70vh;
       overflow: hidden;
       background: #fce4ec;
+      cursor: pointer;
     }
 
-    /* 풍선 스타일 */
+    /* 풍선 그룹(본체+줄+매듭) */
+    .balloonGroup {
+      position: absolute;
+      width: 60px;
+      height: 120px;
+    }
+
+    /* 풍선 본체 */
     .balloon {
       position: absolute;
       width: 60px;
@@ -44,9 +52,33 @@
       border-radius: 50% 50% 40% 40%;
       cursor: pointer;
       transition: transform 0.1s;
+      top: 0; 
+      left: 0;
     }
     .balloon:hover {
       transform: scale(1.1);
+    }
+
+    /* 풍선 줄(이어진 검은 선) */
+    .balloonTail {
+      position: absolute;
+      width: 2px;
+      height: 35px;
+      top: 80px;
+      left: 29px;
+      background: #000;
+    }
+
+    /* 풍선 매듭 (180도 반전 삼각형) */
+    .balloonKnot {
+      position: absolute;
+      top: 75px;
+      left: 25px;
+      width: 0;
+      height: 0;
+      border-left: 5px solid transparent;
+      border-right:5px solid transparent;
+      border-bottom: 5px solid #000; 
     }
 
     /* 점수판, 버튼 */
@@ -77,7 +109,7 @@
       color: #e91e63;
     }
 
-    /* 폭죽(분수형) 효과 컨테이너 */
+    /* 폭죽(분수형) 컨테이너 */
     #fireworksContainer {
       position: fixed;
       top: 0;
@@ -115,243 +147,267 @@
 <body>
   <h1 id="title">생일 축하 풍선터뜨리기 게임</h1>
 
-  <!-- (옵션) 생일 축하 노래 파일이 존재해야 함. -->
+  <!-- 기존 happySong.mp3 (실제로 존재해야 함) -->
   <audio id="happySong" src="happy_birthday_song.mp3" preload="auto"></audio>
-  
+
   <div id="gameContainer"></div>
-  
   <div id="scoreBoard">점수: <span id="score">0</span></div>
   <button id="startButton">게임 시작</button>
   <button id="restartButton">다시 시작</button>
-  
   <div id="gameOverMessage">축하합니다! 풍선을 모두 터뜨렸어요!</div>
   
   <script>
-    // PC/모바일 판별
+    // 모바일 판별
     function isMobile() {
       return /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
         navigator.userAgent
       );
     }
 
-    const gameContainer  = document.getElementById('gameContainer');
-    const scoreElement   = document.getElementById('score');
-    const startButton    = document.getElementById('startButton');
-    const restartButton  = document.getElementById('restartButton');
-    const gameOverMessage= document.getElementById('gameOverMessage');
-    const happySong      = document.getElementById('happySong');
-    const titleElement   = document.getElementById('title');
+    const gameContainer   = document.getElementById('gameContainer');
+    const scoreElement    = document.getElementById('score');
+    const startButton     = document.getElementById('startButton');
+    const restartButton   = document.getElementById('restartButton');
+    const gameOverMessage = document.getElementById('gameOverMessage');
+    const happySong       = document.getElementById('happySong');
+    const titleElement    = document.getElementById('title');
 
-    // 풍선 개수 및 상태
     let balloonCount = 20;
-    let score = 0;
-    let gameStarted = false;
-    let balloons = [];
-    let animationId = null;
+    let score=0;
+    let gameStarted=false;
+    let balloons=[];
+    let animationId=null;
 
-    // 풍선 색상 배열
-    const balloonColors = [
+    // 풍선 색상
+    const balloonColors=[
       "#e91e63","#9c27b0","#2196f3","#4caf50","#ffeb3b","#ff9800",
       "#795548","#607d8b","#f44336","#ab47bc","#66bb6a","#ffa726"
     ];
 
-    // PC/모바일 안내 문구
-    if(isMobile()) {
-      titleElement.textContent = "모바일 환경! 생일축하 풍선 터뜨리기 게임";
-    }
+    // ------------------------------------------------
+    // Web Audio API로 8비트풍을 길게 (약 15~20초) 구성
+    // ------------------------------------------------
+    let audioCtx=null;
+    /*
+      임의로 길게 만든 Happy Birthday 음정/길이. (대략 20초)
+      [주파수(Hz), 길이ms]
+      G4=392, A4=440, B4=494, C5=523, D5=587, E5=659, F#5=740, G5=784 등
+    */
+    const tune=[
+      // 첫 줄 (생일축하합니다 1)
+      [392,300],[392,300],[440,600],[392,600],[523,600],[494,900],
+      [0,200],
+      // 둘째 줄 (생일축하합니다 2)
+      [392,300],[392,300],[440,600],[392,600],[587,600],[523,900],
+      [0,400],
+      // 셋째 줄 (사랑하는 우리아들)
+      [392,300],[392,300],[784,600],[659,400],[523,300],[494,300],[440,900],
+      [0,300],
+      // 넷째 줄 (생일축하합니다)
+      [698,300],[698,300],[659,600],[523,400],[587,300],[523,900],
+      [0,600],
+      // 반복해서 조금 더 길게 or 맺음
+      [392,300],[392,300],[784,600],[659,400],[523,300],[494,300],[440,900],
+      [0,600]
+    ];
 
-    // ---------------------
-    // 풍선 생성
-    // ---------------------
-    function createBalloons() {
-      for (let i = 0; i < balloonCount; i++) {
-        const balloon = document.createElement('div');
-        balloon.classList.add('balloon');
-
-        // 랜덤 색상
-        const color = balloonColors[Math.floor(Math.random() * balloonColors.length)];
-        balloon.style.background = color;
-
-        // 랜덤 위치
-        const x = Math.random() * (gameContainer.clientWidth  - 60);
-        const y = Math.random() * (gameContainer.clientHeight - 80);
-        balloon.style.left = x + 'px';
-        balloon.style.top  = y + 'px';
-
-        // 이동 속도
-        const dx = (Math.random() * 6) - 3; 
-        const dy = (Math.random() * 6) - 3;
-        balloon.dataset.dx = dx;
-        balloon.dataset.dy = dy;
-
-        // 풍선 클릭(또는 터치)
-        balloon.addEventListener('pointerdown', (e) => {
-          // ★ 터치 확대 방지
-          if(e && e.preventDefault) {
-            e.preventDefault();
-          }
-          popBalloon(balloon);
-        }, { passive: false }); // passive: false로 preventDefault 허용
-
-        gameContainer.appendChild(balloon);
-        balloons.push(balloon);
+    function playEightBitSong(){
+      if(!audioCtx){
+        audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+      }
+      let currentTime=audioCtx.currentTime;
+      for(let i=0;i<tune.length;i++){
+        const [freq,lengthMs]=tune[i];
+        const dur=lengthMs/1000;
+        if(freq>0){
+          const osc=audioCtx.createOscillator();
+          const gain=audioCtx.createGain();
+          osc.type='square';
+          osc.frequency.value=freq;
+          osc.connect(gain).connect(audioCtx.destination);
+          gain.gain.value=0.2;
+          osc.start(currentTime);
+          osc.stop(currentTime+dur);
+        }
+        currentTime+=dur;
       }
     }
 
-    // ---------------------
+    // 모바일이면 안내문 수정
+    if(isMobile()){
+      titleElement.textContent="모바일: 핑크색을 터치하면 시작!";
+      startButton.style.display='none';
+      gameContainer.addEventListener('pointerdown',(evt)=>{
+        if(!gameStarted){
+          evt.preventDefault();
+          startGame();
+        }
+      },{passive:false});
+    }
+
+    // 풍선 생성
+    function createBalloons(){
+      for(let i=0;i<balloonCount;i++){
+        const group=document.createElement('div');
+        group.classList.add('balloonGroup');
+
+        const balloon=document.createElement('div');
+        balloon.classList.add('balloon');
+        const color=balloonColors[Math.floor(Math.random()*balloonColors.length)];
+        balloon.style.background=color;
+
+        const tail=document.createElement('div');
+        tail.classList.add('balloonTail');
+
+        const knot=document.createElement('div');
+        knot.classList.add('balloonKnot');
+
+        group.appendChild(balloon);
+        group.appendChild(tail);
+        group.appendChild(knot);
+
+        const x=Math.random()*(gameContainer.clientWidth-60);
+        const y=Math.random()*(gameContainer.clientHeight-120);
+        group.style.left=x+'px';
+        group.style.top =y+'px';
+
+        const dx=(Math.random()*6)-3;
+        const dy=(Math.random()*6)-3;
+        group.dataset.dx=dx;
+        group.dataset.dy=dy;
+
+        balloon.addEventListener('pointerdown',(ev)=>{
+          ev.preventDefault();
+          popBalloon(group);
+        },{passive:false});
+
+        gameContainer.appendChild(group);
+        balloons.push(group);
+      }
+    }
+
     // 풍선 터뜨리기
-    // ---------------------
-    function popBalloon(balloon) {
-      balloon.remove();
-      balloons = balloons.filter(b => b !== balloon);
+    function popBalloon(group){
+      group.remove();
+      balloons = balloons.filter(b=>b!==group);
 
       score++;
-      scoreElement.textContent = score;
-      if (score >= balloonCount) {
+      scoreElement.textContent=score;
+      if(score>= balloonCount){
         endGame();
       }
     }
 
-    // ---------------------
     // 풍선 움직임
-    // ---------------------
-    function moveBalloons() {
-      balloons.forEach(balloon => {
-        let x  = parseFloat(balloon.style.left);
-        let y  = parseFloat(balloon.style.top);
-        let dx = parseFloat(balloon.dataset.dx);
-        let dy = parseFloat(balloon.dataset.dy);
+    function moveBalloons(){
+      balloons.forEach(group=>{
+        let x=parseFloat(group.style.left);
+        let y=parseFloat(group.style.top);
+        let dx=parseFloat(group.dataset.dx);
+        let dy=parseFloat(group.dataset.dy);
 
-        x += dx;
-        y += dy;
+        x+=dx; y+=dy;
+        if(x<0){x=0;dx=-dx;}
+        else if(x+60>gameContainer.clientWidth){x=gameContainer.clientWidth-60;dx=-dx;}
+        if(y<0){y=0;dy=-dy;}
+        else if(y+120>gameContainer.clientHeight){y=gameContainer.clientHeight-120;dy=-dy;}
 
-        // 벽 충돌 반사
-        if (x < 0) {
-          x = 0; dx = -dx;
-        } else if (x + 60 > gameContainer.clientWidth) {
-          x = gameContainer.clientWidth - 60; dx = -dx;
-        }
-        if (y < 0) {
-          y = 0; dy = -dy;
-        } else if (y + 80 > gameContainer.clientHeight) {
-          y = gameContainer.clientHeight - 80; dy = -dy;
-        }
-
-        balloon.style.left = x + 'px';
-        balloon.style.top  = y + 'px';
-        balloon.dataset.dx = dx;
-        balloon.dataset.dy = dy;
+        group.style.left=x+'px';
+        group.style.top =y+'px';
+        group.dataset.dx=dx;
+        group.dataset.dy=dy;
       });
-
-      animationId = requestAnimationFrame(moveBalloons);
+      animationId=requestAnimationFrame(moveBalloons);
     }
 
-    // ---------------------
-    // 폭죽(분수형) 효과
-    // ---------------------
-    function showFountain() {
-      const fwContainer = document.createElement('div');
-      fwContainer.id = 'fireworksContainer';
-      document.body.appendChild(fwContainer);
+    // 폭죽(분수형)
+    function showFountain(){
+      const fw=document.createElement('div');
+      fw.id='fireworksContainer';
+      document.body.appendChild(fw);
 
-      const sparkCount = 40;
-      const sparkColors = [
+      const sparkCount=40;
+      const sparkColors=[
         "#ff1744","#f50057","#d500f9","#651fff","#3d5afe","#2979ff","#00b0ff","#00e5ff",
         "#1de9b6","#00e676","#76ff03","#c6ff00","#ffea00","#ffc400","#ff9100","#ff3d00"
       ];
-      const centerX = window.innerWidth / 2;
-      const centerY = window.innerHeight * 0.8; // 아래쪽
+      const cx=window.innerWidth/2;
+      const cy=window.innerHeight*0.8;
 
-      for (let i=0; i<sparkCount; i++) {
-        const spark = document.createElement('div');
-        spark.classList.add('spark');
-        const c = sparkColors[Math.floor(Math.random() * sparkColors.length)];
-        spark.style.background = c;
+      for(let i=0;i<sparkCount;i++){
+        const sp=document.createElement('div');
+        sp.classList.add('spark');
+        const c=sparkColors[Math.floor(Math.random()*sparkColors.length)];
+        sp.style.background=c;
 
-        spark.style.left = centerX + 'px';
-        spark.style.top  = centerY + 'px';
+        sp.style.left = cx+'px';
+        sp.style.top  = cy+'px';
 
-        const angle = (Math.random() * 90) - 45;
-        const distance = 200 + Math.random() * 200;
-        const size = 8 + Math.random() * 8;
+        const angle=(Math.random()*90)-45;
+        const distance=200+Math.random()*200;
+        const size=8+Math.random()*8;
 
-        spark.style.width = size + "px";
-        spark.style.height= size + "px";
+        sp.style.width=size+'px';
+        sp.style.height=size+'px';
 
-        const rad = angle * (Math.PI/180);
-        const finalX = Math.cos(rad) * distance;
-        const finalY = -Math.sin(rad)* distance;
+        const rad=angle*(Math.PI/180);
+        const fx=Math.cos(rad)*distance;
+        const fy=-Math.sin(rad)*distance;
+        sp.style.setProperty('--spark-tx',fx+'px');
+        sp.style.setProperty('--spark-ty',fy+'px');
 
-        spark.style.setProperty('--spark-tx', finalX + 'px');
-        spark.style.setProperty('--spark-ty', finalY + 'px');
-
-        fwContainer.appendChild(spark);
+        fw.appendChild(sp);
       }
 
-      setTimeout(() => {
-        fwContainer.remove();
-      }, 2500);
+      setTimeout(()=>{fw.remove();},2500);
     }
 
-    // ---------------------
     // 게임 시작
-    // ---------------------
-    function startGame() {
-      if (gameStarted) return;
+    function startGame(){
+      if(gameStarted)return;
+      gameStarted=true;
+      startButton.style.display='none';
+      restartButton.style.display='none';
+      gameOverMessage.style.display='none';
+      score=0;
+      scoreElement.textContent=score;
 
-      gameStarted = true;
-      startButton.style.display   = 'none';
-      restartButton.style.display = 'none';
-      gameOverMessage.style.display = 'none';
-
-      score = 0;
-      scoreElement.textContent = score;
-
-      // 풍선 생성
       createBalloons();
-      // 애니메이션 시작
-      animationId = requestAnimationFrame(moveBalloons);
+      animationId=requestAnimationFrame(moveBalloons);
 
-      // (옵션) 생일축하 노래 재생
-      happySong.currentTime = 0;
+      // MP3 재생
+      happySong.currentTime=0;
       happySong.play().catch(err=>{
-        console.log('오디오 재생 차단됨:', err);
+        console.log('오디오 재생 차단:', err);
       });
     }
 
-    // ---------------------
     // 게임 종료
-    // ---------------------
-    function endGame() {
+    function endGame(){
       cancelAnimationFrame(animationId);
-      showFountain(); // 폭죽
+      showFountain();
 
-      gameOverMessage.style.display = 'block';
-      restartButton.style.display   = 'inline-block';
+      // MP3 중지
+      happySong.pause();
 
-      // 노래 중지하고 싶다면:
-      // happySong.pause();
+      // 8비트풍 재생
+      playEightBitSong();
+
+      gameOverMessage.style.display='block';
+      restartButton.style.display='inline-block';
     }
 
-    // ---------------------
-    // 게임 다시 시작
-    // ---------------------
-    function restartGame() {
-      // 기존 풍선 제거
-      balloons.forEach(b => b.remove());
-      balloons = [];
+    // 다시 시작
+    function restartGame(){
+      balloons.forEach(b=>b.remove());
+      balloons=[];
       cancelAnimationFrame(animationId);
-      gameStarted = false;
-
-      // 재시작
+      gameStarted=false;
       startGame();
     }
 
-    // ---------------------
-    // 이벤트 설정
-    // ---------------------
-    startButton.addEventListener('click', startGame);
-    restartButton.addEventListener('click', restartGame);
+    startButton.addEventListener('click',startGame);
+    restartButton.addEventListener('click',restartGame);
   </script>
 </body>
 </html>
