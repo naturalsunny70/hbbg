@@ -2,369 +2,102 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>생일축하 풍선터뜨리기 게임 (분수형 폭죽)</title>
+  <!-- 아이폰/안드로이드 등에서 확대한 뒤 다시 축소되는 문제 방지 -->
+  <meta name="viewport" content="user-scalable=no, initial-scale=1.0, maximum-scale=1.0" />
+  <title>풍선 터뜨리기 (iPhone Safari 수정버전)</title>
   <style>
     body {
-      margin: 0;
-      padding: 0;
-      font-family: sans-serif;
-      text-align: center;
-      background: #fff;
+      margin: 0; 
+      overflow: hidden; 
+      /* iOS Safari에서 기본 제스처(핀치줌 등) 방지 */
+      touch-action: none;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
     }
-    h1 {
-      margin: 20px;
-    }
-
-    /* 게임 영역 */
-    #gameContainer {
-      position: relative;
-      width: 100vw;
-      height: 70vh;
-      overflow: hidden;
-      background: #fce4ec;
-    }
-
-    /* 풍선 스타일 */
-    .balloon {
-      position: absolute;
-      width: 60px;
-      height: 80px;
-      border-radius: 50% 50% 40% 40%;
-      cursor: pointer;
-      transition: transform 0.1s;
-    }
-    .balloon:hover {
-      transform: scale(1.1);
-    }
-
-    /* 점수판, 버튼 스타일 */
-    #scoreBoard {
-      font-size: 1.2rem;
-      margin: 20px;
-    }
-    #startButton, #restartButton {
-      padding: 10px 20px;
-      margin: 5px;
-      font-size: 1rem;
-      cursor: pointer;
-      border: none;
-      border-radius: 5px;
-      color: #fff;
-    }
-    #startButton {
-      background: #ff4081;
-    }
-    #restartButton {
-      background: #03a9f4;
-      display: none;
-    }
-    #gameOverMessage {
-      font-size: 1.5rem;
-      margin: 10px;
-      display: none;
-      color: #e91e63;
-    }
-
-    /* ──────────────────────────────────────────────────
-       분수형 폭죽(불꽃놀이) 효과를 위한 스타일
-       ────────────────────────────────────────────────── */
-    /* 폭죽 컨테이너 (화면 전체를 덮을 요소) */
-    #fireworksContainer {
-      position: fixed; /* 화면 전체 */
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      pointer-events: none; /* 클릭 방해 X */
-      overflow: hidden;
-      z-index: 9999; /* 최상위 */
-    }
-
-    /* 폭죽 하나의 '불꽃' 스파크 */
-    .spark {
-      position: absolute;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: red;     /* 기본 색 (실제론 JS에서 랜덤 지정) */
-      opacity: 0;
-      animation: fountainAnim 2s ease-out forwards;
-    }
-
-    /* '분수'처럼 위로 뿜어져 사라지는 애니메이션 */
-    @keyframes fountainAnim {
-      0% {
-        transform: translate(0, 0) scale(0.3);
-        opacity: 1;
-      }
-      25% {
-        opacity: 1;
-      }
-      100% {
-        /* 
-          --spark-tx, --spark-ty 는 
-          JS에서 각 불꽃별로 서로 다른 위치로 날아가도록 지정 
-        */
-        transform: translate(var(--spark-tx, 0), var(--spark-ty, 0)) scale(1.8);
-        opacity: 0;
-      }
+    canvas {
+      display: block;
+      /* 터치 시 스크롤/확대 방지 */
+      touch-action: none;
     }
   </style>
+
+  <!-- 
+    Phaser 3.60.0 min 소스 전체를 붙여 넣기
+    https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js
+    에 접속하여 내용 전체 복사 → 아래 주석 위치에 붙여넣으세요.
+  -->
+  <script>
+  /* Phaser min 코드 자리
+     예) !function(t,e){\"use strict\"; ... (중략) ... 
+  */
+  </script>
 </head>
 <body>
-  <h1>생일 축하 풍선터뜨리기 게임</h1>
 
-  <!-- (옵션) 생일 축하 노래: 필요 없다면 제거하거나 경로 수정하세요 -->
-  <audio id="happySong" src="happy_birthday_song.mp3" preload="auto"></audio>
-  
-  <div id="gameContainer"></div>
-  
-  <div id="scoreBoard">점수: <span id="score">0</span></div>
-  <button id="startButton">게임 시작</button>
-  <button id="restartButton">다시 시작</button>
-  
-  <div id="gameOverMessage">축하합니다! 풍선을 모두 터뜨렸어요!</div>
-  
-  <script>
-    // ------------------------------------------------
-    // DOM 요소 참조
-    // ------------------------------------------------
-    const gameContainer = document.getElementById('gameContainer');
-    const scoreElement = document.getElementById('score');
-    const startButton = document.getElementById('startButton');
-    const restartButton = document.getElementById('restartButton');
-    const gameOverMessage = document.getElementById('gameOverMessage');
-    const happySong = document.getElementById('happySong');
+<script>
+// iOS 더블탭/핀치 확대 방지 코드
+document.addEventListener('gesturestart', e => e.preventDefault(), { passive: false });
+document.addEventListener('dblclick', e => e.preventDefault(), { passive: false });
 
-    // ------------------------------------------------
-    // 풍선 관련 전역 변수
-    // ------------------------------------------------
-    let balloonCount = 20;     // 생성할 풍선 개수
-    let score = 0;             // 점수
-    let gameStarted = false;   // 게임 진행 여부
-    let balloons = [];         // 풍선 DOM 요소
-    let animationId = null;    // requestAnimationFrame용
+// ----- Base64 리소스 (간단한 플레이스홀더) -----
+const BALLOON_IMG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC4AAAAuCAYAAAAjz2f3AAABp0lEQVRYR+2XMU7CQBBFX4E1jGjoDfwK7oQfIKZScj6BFcCqWKPgJpFzgJ/QIDxD6De+czkzAyGMDNTn8/2kCGkCIiIiIiIgIpXUh1xILeKVO+G+jvR+I05eA3bga7/h8k1i8rlO19uJ3caFWsEJAS8mJWD4ujzm4ZmEyCe5I+TLW9XeX2A8fIZNb9OgM3ijyfa++nju36Mt351iZN7gx7Yk4uE4m48cCh4sTmC3q0UYw6cMr8ecMz5Dk4MgiKG1K+8aNPCp2q6xaO4A/GegV41+y3dTh1W+el/wWc56WIBwxMdZWOYw2r9kxCkCstI8ln/V3k8fQ+YQOFg+Nll+IfZAdZyxaZwt6I6GXc19PMW4quJiHMXpFE+6Q8hFke1DmIl/kE3qM3m93XkKs4Nn2BUcom+mHap2pRySKhZ/TydNQKRMhIwf1g8py7//QzNiFAGii2z9O8kLCVFzATA0XQ9KASDQMfZ5a/BPjIPl052SMiIiIiIiICJm8QtLsUrolfBAAAAAElFTkSuQmCC";
+const POP_SOUND = "data:audio/wav;base64,UklGRnwBAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YY4AAAAPAAAAAAAOAAAAAAD///8AAAAAAAD///8AAAAAAAD///8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
 
-    // 풍선 색상 배열
-    const balloonColors = [
-      "#e91e63", "#9c27b0", "#2196f3", "#4caf50",
-      "#ffeb3b", "#ff9800", "#795548", "#607d8b", 
-      "#f44336", "#ab47bc", "#66bb6a", "#ffa726"
-    ];
+// ----- Phaser 게임 설정 -----
+const config = {
+  type: Phaser.AUTO,
+  width: 800,
+  height: 600,
+  backgroundColor: '#88e',
+  scene: [MainScene]
+};
 
-    // ------------------------------------------------
-    // 풍선 생성 함수
-    // ------------------------------------------------
-    function createBalloons() {
-      for (let i = 0; i < balloonCount; i++) {
-        const balloon = document.createElement('div');
-        balloon.classList.add('balloon');
-        
-        // 랜덤 색상
-        const randomColor = balloonColors[Math.floor(Math.random() * balloonColors.length)];
-        balloon.style.background = randomColor;
-        
-        // 랜덤 위치
-        const x = Math.random() * (gameContainer.clientWidth - 60);
-        const y = Math.random() * (gameContainer.clientHeight - 80);
-        balloon.style.left = x + 'px';
-        balloon.style.top = y + 'px';
+const game = new Phaser.Game(config);
 
-        // 속도(방향) 랜덤 (-3 ~ +3)
-        const dx = (Math.random() * 6) - 3; 
-        const dy = (Math.random() * 6) - 3;
+// ----- 메인 씬 (풍선 터뜨리기) -----
+class MainScene extends Phaser.Scene {
+  constructor() {
+    super({ key: 'MainScene' });
+  }
 
-        balloon.dataset.dx = dx;
-        balloon.dataset.dy = dy;
+  preload() {
+    // 풍선 이미지 & 팝 사운드
+    this.load.image('balloon', BALLOON_IMG);
+    this.load.audio('pop', POP_SOUND);
+  }
 
-        // 풍선 클릭 -> 제거
-        balloon.addEventListener('click', () => {
-          popBalloon(balloon);
+  create() {
+    // iPhone Safari 등에서 이벤트가 막히지 않도록 pointerdown 사용
+    this.input.addPointer(1);
+
+    // 풍선 여러 개 생성 예시
+    for(let i=0; i<5; i++){
+      const x = Phaser.Math.Between(100, 700);
+      const y = Phaser.Math.Between(100, 500);
+      const balloon = this.add.sprite(x, y, 'balloon')
+        .setScale(0.6)
+        .setInteractive({ useHandCursor: true })
+        .on('pointerdown', (pointer) => {
+          pointer.event.preventDefault(); 
+          this.popBalloon(balloon);
         });
-
-        // 게임 영역에 추가
-        gameContainer.appendChild(balloon);
-        balloons.push(balloon);
-      }
     }
 
-    // ------------------------------------------------
-    // 풍선 터뜨리기
-    // ------------------------------------------------
-    function popBalloon(balloon) {
-      balloon.remove();
-      balloons = balloons.filter(b => b !== balloon);
+    // 안내 문구
+    this.add.text(200, 50, '풍선을 터치(클릭)해서 터뜨리세요', 
+      { fontSize: '28px', fill: '#fff' });
+  }
 
-      score++;
-      scoreElement.textContent = score;
-      if (score >= balloonCount) {
-        endGame();
-      }
-    }
+  popBalloon(balloon) {
+    // 팝 사운드 재생
+    this.sound.play('pop');
 
-    // ------------------------------------------------
-    // 풍선 움직임 (매 프레임)
-    // ------------------------------------------------
-    function moveBalloons() {
-      balloons.forEach(balloon => {
-        let x = parseFloat(balloon.style.left);
-        let y = parseFloat(balloon.style.top);
-        let dx = parseFloat(balloon.dataset.dx);
-        let dy = parseFloat(balloon.dataset.dy);
+    // 풍선 제거 (또는 폭발 애니메이션 후 제거 가능)
+    balloon.destroy();
+  }
+}
+</script>
 
-        x += dx;
-        y += dy;
-
-        // 화면 테두리에 닿으면 반사
-        if (x < 0) {
-          x = 0; dx = -dx;
-        } else if (x + 60 > gameContainer.clientWidth) {
-          x = gameContainer.clientWidth - 60; dx = -dx;
-        }
-        if (y < 0) {
-          y = 0; dy = -dy;
-        } else if (y + 80 > gameContainer.clientHeight) {
-          y = gameContainer.clientHeight - 80; dy = -dy;
-        }
-
-        balloon.style.left = x + 'px';
-        balloon.style.top = y + 'px';
-        balloon.dataset.dx = dx;
-        balloon.dataset.dy = dy;
-      });
-
-      animationId = requestAnimationFrame(moveBalloons);
-    }
-
-    // ------------------------------------------------
-    // "분수형" 폭죽(불꽃놀이) 함수
-    // ------------------------------------------------
-    function showFountain() {
-      // 폭죽 컨테이너
-      const fwContainer = document.createElement('div');
-      fwContainer.id = 'fireworksContainer';
-      document.body.appendChild(fwContainer);
-
-      // 폭죽 spark 개수, 색상
-      const sparkCount = 40; 
-      const sparkColors = [
-        "#ff1744", "#f50057", "#d500f9", "#651fff",
-        "#3d5afe", "#2979ff", "#00b0ff", "#00e5ff",
-        "#1de9b6", "#00e676", "#76ff03", "#c6ff00",
-        "#ffea00", "#ffc400", "#ff9100", "#ff3d00"
-      ];
-
-      // "분수"가 나오는 위치: 화면 아래쪽 중앙
-      const centerX = window.innerWidth / 2;
-      const centerY = window.innerHeight * 0.8; // 80% 지점 (아래쪽)
-
-      // 여러 불꽃 생성
-      for (let i = 0; i < sparkCount; i++) {
-        const spark = document.createElement('div');
-        spark.classList.add('spark');
-
-        // 랜덤 색상
-        const color = sparkColors[Math.floor(Math.random() * sparkColors.length)];
-        spark.style.background = color;
-
-        // 처음 위치(아래쪽 중앙)
-        spark.style.left = centerX + "px";
-        spark.style.top = centerY + "px";
-
-        // 불꽃이 퍼지는 각도(분수 느낌을 위해 -45도 ~ +45도 사이)
-        const angle = (Math.random() * 90) - 45; // -45 ~ +45
-        // 거리(얼마나 위로 뻗을지)
-        const distance = 200 + Math.random() * 200; // 200 ~ 400
-        // 크기(약간 랜덤)
-        const size = 8 + Math.random() * 8; // 8 ~ 16 px
-
-        // 불꽃 크기
-        spark.style.width = size + "px";
-        spark.style.height = size + "px";
-
-        // 최종 이동할 좌표 (각도+거리 이용)
-        const rad = angle * (Math.PI / 180);
-        const finalX = Math.cos(rad) * distance;
-        const finalY = -Math.sin(rad) * distance; 
-        // (위로 뻗어나가야 하므로 Y는 -부호)
-
-        // 각 불꽃마다 CSS 변수로 최종 위치 지정
-        spark.style.setProperty('--spark-tx', finalX + 'px');
-        spark.style.setProperty('--spark-ty', finalY + 'px');
-
-        fwContainer.appendChild(spark);
-      }
-
-      // 2초 애니메이션이므로, 조금 더 기다렸다가 제거
-      setTimeout(() => {
-        fwContainer.remove();
-      }, 2500);
-    }
-
-    // ------------------------------------------------
-    // 게임 시작
-    // ------------------------------------------------
-    function startGame() {
-      if (gameStarted) return;
-
-      gameStarted = true;
-      startButton.style.display = 'none';
-      restartButton.style.display = 'none';
-      gameOverMessage.style.display = 'none';
-
-      // 점수 초기화
-      score = 0;
-      scoreElement.textContent = score;
-
-      // 풍선 생성 & 움직임
-      createBalloons();
-      animationId = requestAnimationFrame(moveBalloons);
-
-      // (옵션) 생일 축하 노래 재생
-      happySong.currentTime = 0;
-      happySong.play().catch(err => {
-        console.log("오디오 재생이 차단되었습니다:", err);
-      });
-    }
-
-    // ------------------------------------------------
-    // 게임 종료
-    // ------------------------------------------------
-    function endGame() {
-      // 풍선 움직임 중지
-      cancelAnimationFrame(animationId);
-
-      // 분수형 폭죽 효과!
-      showFountain();
-
-      gameOverMessage.style.display = 'block';
-      restartButton.style.display = 'inline-block';
-
-      // 노래 끄고 싶다면 아래 주석 해제
-      // happySong.pause();
-    }
-
-    // ------------------------------------------------
-    // 다시 시작
-    // ------------------------------------------------
-    function restartGame() {
-      // 기존 풍선 제거
-      balloons.forEach(balloon => balloon.remove());
-      balloons = [];
-
-      // 상태 리셋
-      gameStarted = false;
-      cancelAnimationFrame(animationId);
-
-      // 게임 재시작
-      startGame();
-    }
-
-    // ------------------------------------------------
-    // 이벤트 바인딩
-    // ------------------------------------------------
-    startButton.addEventListener('click', startGame);
-    restartButton.addEventListener('click', restartGame);
-  </script>
 </body>
 </html>
